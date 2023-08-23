@@ -1,5 +1,7 @@
 # Regression and Statistical Inference Toolkit
 
+Welcome to the **reg_stat_inference** toolkit!
+
 This toolkit provides functions for treating multicollinearity and performing feature selection based on p-values in linear regression and logistic regression models. It leverages the `statsmodels` library for model analysis.
 
 ## Purpose
