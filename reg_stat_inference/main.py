@@ -133,7 +133,10 @@ def treat_multicollinearity(
         'OLS': (sm.OLS, {}),
         'logit': (sm.Logit, {}),
     }
-
+    try:
+        X = X.astype(float)
+    except:
+        raise Exception("Invalid dataset dtypes. Cannot have object dtypes")
 
     if reg_type not in ['OLS', 'logit']:
         raise ValueError("Invalid 'reg_type'. Must be 'OLS' or 'logit'.")
