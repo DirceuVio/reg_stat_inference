@@ -160,9 +160,11 @@ def treat_multicollinearity(
 
     model = model_class(y, X.astype(float), **model_args).fit(disp=False)
 
-    dropped_features = []
 
-    while max_vif >= threshhold_vif and col_to_drop not in dropped_features:
+    while True:
+        if max_vif < threshhold_vif:
+            break
+
         X = X.drop(col_to_drop, axis=1)
         X = sm.add_constant(X)
 
@@ -176,8 +178,6 @@ def treat_multicollinearity(
         )
         col_to_drop = vif_series.sort_values(ascending=False).index[0]
         max_vif = vif_series.max()
-
-        dropped_features.append(col_to_drop)
 
     return TreatedModelResults(
         vif_series.index.tolist(),
@@ -242,27 +242,28 @@ def treat_pvalue(
 
     if threshold_pval < 0 or threshold_pval > 1:
         raise ValueError("Invalid 'threshold_pval'. Must be greater than 0 and less than 1")
-
-    cols = X.columns.tolist()
-
-    max_p_value = 1
-
+    
     model_class, model_args = regression_mapping[reg_type]
+    cols = X.columns.tolist()
+    X = sm.add_constant(X)
+    model = model_class(y, X.astype(float), **model_args).fit(disp=False)
+    
+    p_values = model.pvalues
+    max_p_value = max(p_values)
+    col_to_drop = p_values.idxmax()
 
-    cols_to_drop = []
+    while True:
+        if max_p_value < threshold_pval:
+            break
 
-    while max_p_value > threshold_pval:
-        X = sm.add_constant(X[cols])
+        cols.remove(col_to_drop)
+        X = X[cols]
+        X = sm.add_constant(X)
 
         model = model_class(y, X.astype(float), **model_args).fit(disp=False)
 
-        p_values = model.pvalues
+        p_values = model.pvalues[cols]
         max_p_value = max(p_values)
-
         col_to_drop = p_values.idxmax()
-
-        if col_to_drop in cols:
-            cols.remove(col_to_drop)
-            cols_to_drop.append(col_to_drop)
-
+        
     return TreatedModelResults(cols, model)
