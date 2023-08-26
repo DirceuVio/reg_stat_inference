@@ -8,6 +8,7 @@ import statsmodels.api as sm
 from typing import List, Tuple, Any, Union
 from dataclasses import dataclass
 
+
 @dataclass
 class TreatedModelResults:
     """
@@ -17,20 +18,23 @@ class TreatedModelResults:
     - metric_list (List[str]): The metrics returned by the model
     - model (sm.Logit | sm.OLS): The final model after treatment
     """
+
     metric_list: List[str]
     model: Union[sm.Logit, sm.OLS]
 
     def __repr__(self) -> str:
-        return f"TreatedModelResults(metric_list={self.metric_list}, model={self.model})"
+        return (
+            f"TreatedModelResults(metric_list={self.metric_list}, model={self.model})"
+        )
 
 
 def treat_regression_model(
-        X: pd.DataFrame,
-        y: pd.DataFrame,
-        threshhold_vif: float = 5,
-        threshold_pval: float = 0.05,
-        reg_type: str = 'OLS'
-    ) -> TreatedModelResults:
+    X: pd.DataFrame,
+    y: pd.DataFrame,
+    threshhold_vif: float = 5,
+    threshold_pval: float = 0.05,
+    reg_type: str = "OLS",
+) -> TreatedModelResults:
     """
     Treat multicollinearity and drop features based on p-values in a linear regression or logistic regression model.
 
@@ -78,15 +82,17 @@ def treat_regression_model(
     TreatedModelResults(metric_list=['feature1', 'feature2'], model=<statsmodels.regression.linear_model.OLS object at ...>)
     """
 
-    if reg_type not in ['OLS', 'logit']:
+    if reg_type not in ["OLS", "logit"]:
         raise ValueError("Invalid 'reg_type'. Must be 'OLS' or 'logit'.")
 
     if threshhold_vif < 0:
         raise ValueError("Invalid 'threshhold_vif'. Must be a non-negative number.")
 
     if threshold_pval < 0 or threshold_pval > 1:
-        raise ValueError("Invalid 'threshold_pval'. Must be greater than 0 and less than 1")
-    
+        raise ValueError(
+            "Invalid 'threshold_pval'. Must be greater than 0 and less than 1"
+        )
+
     vif_results = treat_multicollinearity(X, y, threshhold_vif, reg_type)
 
     pval_results = treat_pvalue(X[vif_results.metric_list], y, threshold_pval, reg_type)
@@ -94,13 +100,9 @@ def treat_regression_model(
     return pval_results
 
 
-
 def treat_multicollinearity(
-        X: pd.DataFrame,
-        y: pd.DataFrame,
-        threshhold_vif: float = 5,
-        reg_type: str = 'OLS'
-    ) -> TreatedModelResults:
+    X: pd.DataFrame, y: pd.DataFrame, threshhold_vif: float = 5, reg_type: str = "OLS"
+) -> TreatedModelResults:
     """
     Treat multicollinearity in a linear regression or logistic regression model.
 
@@ -130,23 +132,22 @@ def treat_multicollinearity(
     """
 
     regression_mapping = {
-        'OLS': (sm.OLS, {}),
-        'logit': (sm.Logit, {}),
+        "OLS": (sm.OLS, {}),
+        "logit": (sm.Logit, {}),
     }
     try:
         X = X.astype(float)
     except:
         raise Exception("Invalid dataset dtypes. Cannot have object dtypes")
 
-    if reg_type not in ['OLS', 'logit']:
+    if reg_type not in ["OLS", "logit"]:
         raise ValueError("Invalid 'reg_type'. Must be 'OLS' or 'logit'.")
 
     if threshhold_vif < 0:
         raise ValueError("Invalid 'threshhold_vif'. Must be a positive number.")
 
-    
     model_class, model_args = regression_mapping[reg_type]
-    
+
     vif_series = pd.Series(
         [variance_inflation_factor(X.values, i) for i in range(X.shape[1])],
         index=X.columns,
@@ -160,7 +161,6 @@ def treat_multicollinearity(
 
     model = model_class(y, X.astype(float), **model_args).fit(disp=False)
 
-
     while True:
         if max_vif < threshhold_vif:
             break
@@ -170,7 +170,7 @@ def treat_multicollinearity(
 
         model = model_class(y, X.astype(float), **model_args).fit(disp=False)
 
-        X = X.drop('const', axis=1)
+        X = X.drop("const", axis=1)
         vif_series = pd.Series(
             [variance_inflation_factor(X.values, i) for i in range(X.shape[1])],
             index=X.columns,
@@ -179,17 +179,15 @@ def treat_multicollinearity(
         col_to_drop = vif_series.sort_values(ascending=False).index[0]
         max_vif = vif_series.max()
 
-    return TreatedModelResults(
-        vif_series.index.tolist(),
-        model
-    )
+    return TreatedModelResults(vif_series.index.tolist(), model)
+
 
 def treat_pvalue(
-        X: pd.DataFrame,
-        y: pd.DataFrame,
-        threshold_pval: float = 0.05,
-        reg_type: str = 'OLS'
-    ) -> TreatedModelResults:
+    X: pd.DataFrame,
+    y: pd.DataFrame,
+    threshold_pval: float = 0.05,
+    reg_type: str = "OLS",
+) -> TreatedModelResults:
     """
     Iteratively drops features based on p-values in a linear regression or logistic regression model.
 
@@ -233,21 +231,23 @@ def treat_pvalue(
     """
 
     regression_mapping = {
-        'OLS': (sm.OLS, {}),
-        'logit': (sm.Logit, {}),
+        "OLS": (sm.OLS, {}),
+        "logit": (sm.Logit, {}),
     }
 
     if reg_type not in regression_mapping:
         raise ValueError("Invalid 'reg_type'. Must be 'OLS' or 'logit'.")
 
     if threshold_pval < 0 or threshold_pval > 1:
-        raise ValueError("Invalid 'threshold_pval'. Must be greater than 0 and less than 1")
-    
+        raise ValueError(
+            "Invalid 'threshold_pval'. Must be greater than 0 and less than 1"
+        )
+
     model_class, model_args = regression_mapping[reg_type]
     cols = X.columns.tolist()
     X = sm.add_constant(X)
     model = model_class(y, X.astype(float), **model_args).fit(disp=False)
-    
+
     p_values = model.pvalues
     max_p_value = max(p_values)
     col_to_drop = p_values.idxmax()
@@ -265,5 +265,5 @@ def treat_pvalue(
         p_values = model.pvalues[cols]
         max_p_value = max(p_values)
         col_to_drop = p_values.idxmax()
-        
+
     return TreatedModelResults(cols, model)
