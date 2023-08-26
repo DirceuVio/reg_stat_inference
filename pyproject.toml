@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reg-stat-inference"
-version = "0.1.7"
+version = "0.1.8"
 description = "Treat multicollinearity and non-significant variables from your statsmodels linear and logistic regressions"
 authors = ["Dirceu Silva <ddasilvajunior@vio.com>"]
 readme = "README.md"
