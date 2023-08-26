@@ -265,4 +265,4 @@ def treat_pvalue(
             cols.remove(col_to_drop)
             cols_to_drop.append(col_to_drop)
 
-    return TreatedModelResults(cols_to_drop, model)
+    return TreatedModelResults(cols, model)
